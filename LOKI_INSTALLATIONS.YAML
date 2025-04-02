@@ -1,15 +1,15 @@
 loki_ip: '10.111.0.27'
 log_sources:
   hostname:
-    "integration-nginx-prod-servicepipe-.+": # регулярные выражения необходимо помещать в кавычки
+    "integration-nginx-prod-servicepipe-.+":  # регулярные выражения необходимо помещать в кавычки
       hostname: "nginx.ladadigit.io"
       syslog_service_name: nginx
-      regexp: true # Необходимо добавлять этот параметр с флагом true, если название контейнеров указаны регулярным выражением
-  container_name: # Название контейнера хранения событий
-    openvpn: # Название сервиса в контейнере
-      hostname: "vpn.ladadigit.io" # Хостнейм источника (если не указан, будет unsetted_hostname)
-      port: 514 # Порт для отправки на syslog (если не указан, по умолчанию будет 514)
-      syslog_service_name: openvpn # Programmname источника
+      regexp: true  # Необходимо добавлять этот параметр с флагом true, если название контейнеров указаны регулярным выражением
+  container_name:  # Название контейнера хранения событий
+    openvpn:  # Название сервиса в контейнере
+      hostname: "vpn.ladadigit.io"  # Хостнейм источника (если не указан, будет unsetted_hostname)
+      port: 514  # Порт для отправки на syslog (если не указан, по умолчанию будет 514)
+      syslog_service_name: openvpn  # Programmname источника
     vault:
       hostname: "core-vault.int.ladadigit.io"
       syslog_service_name: vault

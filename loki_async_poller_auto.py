@@ -6,66 +6,59 @@ import logging
 import os
 import socket
 import subprocess
+import sys
 import time
 import yaml
 
-LOKI_LOG_PATH = f"/opt/loki/log"
-LOKI_LOG_FILE = f"{LOKI_LOG_PATH}/loki_logs.log"
-LOKI_REQUEST_TIMESTAMP_PATH = f"/opt/loki/tmp"
+PROGRAM_PATH = "/opt/loki/"
+LOKI_CONFIG_FILE = f"{PROGRAM_PATH}LOKI_INSTALLATIONS.YAML"
+LOKI_LOG_PATH = f"{PROGRAM_PATH}log"
+LOKI_POLLER_LOG_FILE = f"{LOKI_LOG_PATH}/loki_logs.log"
+LOKI_REQUEST_TIMESTAMP_PATH = f"{PROGRAM_PATH}tmp"
 LOKI_REQUEST_TIMESTAMP_FILE = f"{LOKI_REQUEST_TIMESTAMP_PATH}/loki_last_timestamp.txt"
 SERVICE_PATH = "/etc/systemd/system/loki_api.service"
-TIMER_PATH = "/etc/systemd/system/loki_api.timer"
 
 
-if not os.path.exists(LOKI_LOG_FILE):
+if not os.path.exists(LOKI_POLLER_LOG_FILE):
     # Создание файла для логирования
-    os.mkdir(LOKI_LOG_PATH)
-    with open(f'{LOKI_LOG_FILE}', 'w+') as file:
-        file.write("INFO: Создан файл для логирования скрипта loki_api_poller.py")
+    os.makedirs(LOKI_LOG_PATH, exist_ok=True)
+    with open(f'{LOKI_POLLER_LOG_FILE}', 'w+') as file:
+        file.write(f"INFO: Создан файл для логирования скрипта {os.path.basename(__file__)}")
 
-logging.basicConfig(filename=f"{LOKI_LOG_FILE}", level=logging.INFO, format="%(asctime)s - %(message)s")
+logging.basicConfig(filename=LOKI_POLLER_LOG_FILE, level=logging.INFO, format="%(asctime)s - %(message)s")
 
-with open('/opt/loki/LOKI_INSTALLATIONS.YAML', 'r') as installations_info_file:
+with open(LOKI_CONFIG_FILE, "r") as installations_info_file:
     # Парсинг YAML файла для получения информации о сервисах
+    
+    # TODO сделать валидацию конфига
+    
     installations_info = yaml.safe_load(installations_info_file)
-    log_sources = installations_info['log_sources']
-    LOKI_IP = installations_info['loki_ip']
+    LOKI_IP = installations_info.get("loki_ip", None)
+    if not LOKI_IP:
+        logging.info(f"ERROR: Отсутствует параметр 'loki_ip' в конфигурационном файле: {LOKI_CONFIG_FILE}.")
+        sys.exit(1)
+    log_sources = installations_info.get("log_sources", None)
 
 
 def loki_service_creator():
-    """Создаёт сервис linux, который будет вызывать скрипт каждую секунду"""
+    """Создаёт сервис linux, который будет циклично вызывать скрипт после завершения его выполнения"""
 
-    with open(TIMER_PATH, 'w') as loki_timer_file:
-        loki_timer_file.write(
-            '[Unit]\n'
-            'Description=Timer for loki_api (every 1 second)\n\n'
-            '[Timer]\n'
-            'OnBootSec=1sec\n'
-            'OnUnitActiveSec=1sec\n'
-            'Unit=loki_api.service\n\n'
-            '[Install]\n'
-            'WantedBy=timers.target'
-        )
-    subprocess.run(["sudo", "systemctl", "daemon-reload"])
-    subprocess.run(["sudo", "systemctl", "start", "loki_api.timer"])
-    subprocess.run(["sudo", "systemctl", "enable", "loki_api.timer"])
-
-    with open(SERVICE_PATH, 'w') as loki_service_file:
+    with open(SERVICE_PATH, "w") as loki_service_file:
         loki_service_file.write(
-            '[Unit]\n'
-            'Description=LOKI API SERVICE\n'
-            'Wants=network-online.target\n'
-            'After=network.target network-online.target\n'
-            'Wants=loki_api.timer\n\n'
-            '[Service]\n'
-            'Type=simple\n'
-            'ExecStart=/usr/bin/python3 /opt/loki/loki_api_poller.py\n'
-            'Restart=always\n'
-            'RestartSec=1\n'
-            'StartLimitInterval=0\n\n'
-            '[Install]\n'
-            'WantedBy=multi-user.target\n\n'
+            "[Unit]\n"
+            "Description=LOKI API SERVICE\n"
+            "Wants=network-online.target\n"
+            "After=network.target network-online.target\n"
+            "[Service]\n"
+            "Type=simple\n"
+            f"ExecStart=/usr/bin/python3 {PROGRAM_PATH}{os.path.basename(__file__)}\n"
+            "Restart=always\n"
+            "RestartSec=0\n"
+            "StartLimitInterval=0\n\n"
+            "[Install]\n"
+            "WantedBy=multi-user.target\n\n"
         )
+
     subprocess.run(["sudo", "systemctl", "daemon-reload"])
     subprocess.run(["sudo", "systemctl", "start", "loki_api.service"])
     subprocess.run(["sudo", "systemctl", "enable", "loki_api.service"])
@@ -82,7 +75,7 @@ def get_time_range():
     """
 
     if not os.path.exists(LOKI_REQUEST_TIMESTAMP_PATH):
-        os.mkdir(LOKI_REQUEST_TIMESTAMP_PATH)
+        os.makedirs(LOKI_REQUEST_TIMESTAMP_PATH, exist_ok=True)
         with open(LOKI_REQUEST_TIMESTAMP_FILE, "w") as timestamp_file:
             timestamp_file.write(str(int(time.time_ns())))
 
@@ -136,7 +129,7 @@ async def send_syslog_message(events: list, port: int):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         for i_event in events:
-            sock.sendto(i_event.encode('utf-8'), syslog_server)
+            sock.sendto(i_event.encode("utf-8"), syslog_server)
     finally:
         sock.close()
 
@@ -161,17 +154,17 @@ async def process_json_and_collect_events(json_response: dict, installation_meta
         return events
 
     container_identifier, service_name = installation_metadata
-    hostname = log_sources[container_identifier][service_name].get('hostname', "unsetted_hostname")
-    syslog_programname = log_sources[container_identifier][service_name].get('syslog_service_name')
-    port = log_sources[container_identifier][service_name].get('port', 514)
+    hostname = log_sources[container_identifier][service_name].get("hostname", "unsetted_hostname")
+    syslog_programname = log_sources[container_identifier][service_name].get("syslog_service_name")
+    port = log_sources[container_identifier][service_name].get("port", 514)
 
     streams_list = json_response["data"]["result"]
 
     for i_stream in streams_list:
-        for i_value in i_stream['values']:
+        for i_value in i_stream["values"]:
             timestamp, log_msg = i_value
 
-            if service_name == 'gitlab' and '{\"' in log_msg:
+            if service_name == "gitlab" and '{\"' in log_msg:
                 log_msg.replace(r'\"', '"')
             if not log_msg:
                 continue
@@ -215,9 +208,9 @@ async def main():
                 "end": end_ns_timestamp,
                 "limit": 5000
             },
-            [f'{installation_container}', f'{container_name}']
+            [f"{installation_container}", f"{container_name}"]
         )
-        if not log_sources[installation_container][container_name].get('regexp', False)
+        if not log_sources[installation_container][container_name].get("regexp", False)
         else
         (
             f"http://{LOKI_IP}:3100/loki/api/v1/query_range",
@@ -227,7 +220,7 @@ async def main():
                 "end": end_ns_timestamp,
                 "limit": 5000
             },
-            [f'{installation_container}', f'{container_name}']
+            [f"{installation_container}", f"{container_name}"]
         )
         for installation_container in log_sources
         for container_name in log_sources[installation_container]
@@ -244,10 +237,9 @@ if __name__ == "__main__":
 
     asyncio.run(main())
 
-    log_file_size = os.path.getsize(LOKI_LOG_FILE)
-    if log_file_size / (1024 * 1024) > 5:
-        # Очистка лог файла, если размер > 5 МБ
-        with open(LOKI_LOG_FILE, "w"):
-            pass
-        logging.info("INFO: Файл успешно очищен, т.к. его размер был больше 5 МБ.")
+    if os.path.exists(LOKI_POLLER_LOG_FILE) and os.path.getsize(LOKI_POLLER_LOG_FILE) > 5 * 1024 * 1024:
+        open(LOKI_POLLER_LOG_FILE, "w").close()
+        logging.info("INFO: Файл логов очищен, так как его размер превышал 5 МБ.")
+
     logging.info("INFO: Скрипт успешно завершил свою работу.")
+    sys.exit(0)
