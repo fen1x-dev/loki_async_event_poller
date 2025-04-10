@@ -27,18 +27,37 @@ if not os.path.exists(LOKI_POLLER_LOG_FILE):
 
 logging.basicConfig(filename=LOKI_POLLER_LOG_FILE, level=logging.INFO, format="%(asctime)s - %(message)s")
 
-with open(LOKI_CONFIG_FILE, "r") as installations_info_file:
-    # Парсинг YAML файла для получения информации о сервисах
-    
-    # TODO сделать валидацию конфига
-    
-    installations_info = yaml.safe_load(installations_info_file)
-    LOKI_IP = installations_info.get("loki_ip", None)
-    if not LOKI_IP:
-        logging.info(f"ERROR: Отсутствует параметр 'loki_ip' в конфигурационном файле: {LOKI_CONFIG_FILE}.")
-        sys.exit(1)
-    log_sources = installations_info.get("log_sources", None)
+try:
+    with open(LOKI_CONFIG_FILE, 'r') as installations_info_file:
+        # Парсинг YAML файла для получения информации о сервисах
+        installations_info = yaml.safe_load(installations_info_file)
+        LOKI_IP = installations_info.get("loki_ip", None)
+        if not LOKI_IP:
+            logging.error(f"ERROR: Отсутствует параметр 'loki_ip' в конфигурационном файле: {LOKI_CONFIG_FILE}.")
+            sys.exit(1)
 
+        LOG_SOURCES = installations_info.get("log_sources", None)
+        if not LOG_SOURCES:
+            logging.error(f"ERROR: Отсутствует параметр 'log_sources' в конфигурационном файле: {LOKI_CONFIG_FILE}")
+            sys.exit(1)
+        containers = list(LOG_SOURCES.keys())
+
+        for i_container in containers:
+            services = LOG_SOURCES.get(i_container)
+            for service_info in services:
+                service = service_info.get('service_name', None)
+                if not service:
+                    logging.error(f"ERROR: Отсутствует параметр 'service_name' в конфигурационном файле: {LOKI_CONFIG_FILE}")
+                    sys.exit(1)
+                lst = service_info.get('log_source_type', None)
+                if not lst:
+                    logging.error(f"ERROR: Отсутствует параметр 'log_source_type' для сервиса {service} "
+                          f"в конфигурационном файле: {LOKI_CONFIG_FILE}.\n"
+                          f"Структура сервиса: log_sources->{i_container}->{service}")
+                    sys.exit(1)
+except:
+    logging.error(f"ERROR: Ошибка синтаксиса конфигурационного файла: {LOKI_CONFIG_FILE}")
+    sys.exit(1)
 
 def loki_service_creator():
     """Создаёт сервис linux, который будет циклично вызывать скрипт после завершения его выполнения"""
@@ -114,6 +133,8 @@ async def fetch_loki_data(url: str, params: dict, container_identifier_tags: lis
         except Exception as exception:
             logging.error(f"ERROR: Ошибка при запросе к Loki: {exception}")
             return None
+
+    # TODO сделать отправку событий сразу после получения ответа
 
 
 async def send_syslog_message(events: list, port: int):
@@ -203,27 +224,27 @@ async def main():
         (
             f"http://{LOKI_IP}:3100/loki/api/v1/query_range",
             {
-                "query": f'{{{installation_container}="{container_name}"}}',
+                "query": f'{{{installation_container}="{service_info.get("service_name")}"}}',
                 "start": start_ns_timestamp,
                 "end": end_ns_timestamp,
                 "limit": 5000
             },
-            [f"{installation_container}", f"{container_name}"]
+            [f"{installation_container}", f"{service_info.get('service_name')}"]
         )
-        if not log_sources[installation_container][container_name].get("regexp", False)
+        if not service_info.get("regexp", False)
         else
         (
             f"http://{LOKI_IP}:3100/loki/api/v1/query_range",
             {
-                "query": f'{{{installation_container}=~"{container_name}"}}',
+                "query": f'{{{installation_container}=~"{service_info.get("service_name")}"}}',
                 "start": start_ns_timestamp,
                 "end": end_ns_timestamp,
                 "limit": 5000
             },
-            [f"{installation_container}", f"{container_name}"]
+            [f"{installation_container}", f"{service_info.get('service_name')}"]
         )
-        for installation_container in log_sources
-        for container_name in log_sources[installation_container]
+        for installation_container in containers
+        for service_info in LOG_SOURCES[installation_container]
     ]
 
     await process_loki_instances(loki_urls_with_params)
