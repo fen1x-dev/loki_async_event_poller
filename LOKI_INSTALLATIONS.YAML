@@ -1,113 +1,113 @@
 loki_ip: '10.111.0.27'
 log_sources:
   hostname:
-    "integration-nginx-prod-servicepipe-.+":  # регулярные выражения необходимо помещать в кавычки
+    - service_name: "integration-nginx-prod-servicepipe-.+"  # регулярные выражения необходимо помещать в кавычки
       hostname: "nginx.ladadigit.io"
-      syslog_service_name: nginx
+      log_source_type: nginx
       regexp: true  # Необходимо добавлять этот параметр с флагом true, если название контейнеров указаны регулярным выражением
   container_name:  # Название контейнера хранения событий
-    openvpn:  # Название сервиса в контейнере
-      hostname: "vpn.ladadigit.io"  # Хостнейм источника (если не указан, будет unsetted_hostname)
+    - service_name: openvpn  # Название сервиса в контейнере
+      hostname: "vpn.ladadigit.io"  # Hostname источника (если не указан, будет unsetted_hostname)
       port: 514  # Порт для отправки на syslog (если не указан, по умолчанию будет 514)
-      syslog_service_name: openvpn  # Programmname источника
-    vault:
+      log_source_type: openvpn  # Programname источника
+    - service_name: vault
       hostname: "core-vault.int.ladadigit.io"
-      syslog_service_name: vault
-    gitlab:
+      log_source_type: vault
+    - service_name: gitlab
       hostname: "core-gitlab.int.ladadigit.io"
-      syslog_service_name: gitlab
-    nginx:
+      log_source_type: gitlab
+    - service_name: nginx
       hostname: "nginx.ladadigit.io"
-      syslog_service_name: nginx
-    superset_nginx:
+      log_source_type: nginx
+    - service_name: superset_nginx
       hostname: "nginx.ladadigit.io"
-      syslog_service_name: nginx
-    mongo-b2c:
+      log_source_type: nginx
+    - service_name: mongo-b2c
       hostname: "mongo.ladadigit.io"
-      syslog_service_name: mongo
-    mongo-b2c-prod-generic:
+      log_source_type: mongo
+    - service_name: mongo-b2c-prod-generic
       hostname: "mongo.ladadigit.io"
-      syslog_service_name: mongo
-    mongo-exporter:
+      log_source_type: mongo
+    - service_name: mongo-exporter
       hostname: "mongo.ladadigit.io"
-      syslog_service_name: mongo
-    mongo-staging:
+      log_source_type: mongo
+    - service_name: mongo-staging
       hostname: "mongo.ladadigit.io"
-      syslog_service_name: mongo
-    artifactory-postgres:
+      log_source_type: mongo
+    - service_name: artifactory-postgres
       hostname: "postgres.ladadigit.io"
-      syslog_service_name: postgres
-    hw-vmp-v_postgres-1:
+      log_source_type: postgres
+    - service_name: hw-vmp-v_postgres-1
       hostname: "postgres.ladadigit.io"
-      syslog_service_name: postgres
-    loop-postgres:
+      log_source_type: postgres
+    - service_name: loop-postgres
       hostname: "postgres.ladadigit.io"
-      syslog_service_name: postgres
-    netbox-postgres:
+      log_source_type: postgres
+    - service_name: netbox-postgres
       hostname: "postgres.ladadigit.io"
-      syslog_service_name: postgres
-    postgres-b2c-keycloak:
+      log_source_type: postgres
+    - service_name: postgres-b2c-keycloak
       hostname: "postgres.ladadigit.io"
-      syslog_service_name: postgres
-    postgres-b2c-prod-generic:
+      log_source_type: postgres
+    - service_name: postgres-b2c-prod-generic
       hostname: "postgres.ladadigit.io"
-      syslog_service_name: postgres
-    postgres-b2c-prod-keycloak:
+      log_source_type: postgres
+    - service_name: postgres-b2c-prod-keycloak
       hostname: "postgres.ladadigit.io"
-      syslog_service_name: postgres
-    postgres-b2c-prod-oms:
+      log_source_type: postgres
+    - service_name: postgres-b2c-prod-oms
       hostname: "postgres.ladadigit.io"
-      syslog_service_name: postgres
-    postgres-b2c-services:
+      log_source_type: postgres
+    - service_name: postgres-b2c-services
       hostname: "postgres-b2c-services.ladadigit.io"
-      syslog_service_name: postgres
-    postgres-exporter:
+      log_source_type: postgres
+    - service_name: postgres-exporter
       hostname: "postgres.ladadigit.io"
-      syslog_service_name: postgres
-    postgres-lldap:
+      log_source_type: postgres
+    - service_name: postgres-lldap
       hostname: "postgres.ladadigit.io"
-      syslog_service_name: postgres
-    postgres-oms:
+      log_source_type: postgres
+    - service_name: postgres-oms
       hostname: "postgres-oms.ladadigit.io"
-      syslog_service_name: postgres
-    postgres-oncall:
+      log_source_type: postgres
+    - service_name: postgres-oncall
       hostname: "postgres.ladadigit.io"
-      syslog_service_name: postgres
-    postgres-staging:
+      log_source_type: postgres
+    - service_name: postgres-staging
       hostname: "postgres-staging.ladadigit.io"
-      syslog_service_name: postgres
-    postgres-testops:
+      log_source_type: postgres
+    - service_name: postgres-testops
       hostname: "postgres.ladadigit.io"
-      syslog_service_name: postgres
-    sonar-postgres:
+      log_source_type: postgres
+    - service_name: sonar-postgres
       hostname: "postgres.ladadigit.io"
-      syslog_service_name: postgres
-    postgres-lecar-services:
+      log_source_type: postgres
+    - service_name: postgres-lecar-services
       hostname: "postgres-lecar-services.ladadigit.io"
-      syslog_service_name: postgres
+      log_source_type: postgres
   container:
-    keycloak:
+    - service_name: keycloak
       hostname: "key.ladadigit.io"
-      syslog_service_name: keycloak
-    keycloak-stage:
+      log_source_type: keycloak
+    - service_name: keycloak-stage
       hostname: "key.ladadigit.io"
-      syslog_service_name: keycloak
-    web-ecom-admin:
+      log_source_type: keycloak
+    - service_name: web-ecom-admin
       hostname: "nginx.ladadigit.io"
-      syslog_service_name: nginx
-    web-ecom-personal-area:
+      log_source_type: nginx
+    - service_name: web-ecom-personal-area
       hostname: "nginx.ladadigit.io"
-      syslog_service_name: nginx
-    zitadel-prod:
+      log_source_type: nginx
+    - service_name: zitadel-prod
       hostname: "zitadel-prod.ladadigit.io"
-      syslog_service_name: zitadel
+      log_source_type: zitadel
   k8s_cluster:
-    k8s-prod:
+    - service_name: k8s-prod
       hostname: "k8s-prod.ladadigit.io"
       port: 1542
-      syslog_service_name: k8s
+      log_source_type: k8s
   k8s_stage:
-    k8s-stage:
+    - service_name: k8s-stage
       hostname: "k8s-prod.ladadigit.io"
       port: 1542
-      syslog_service_name: k8s
+      log_source_type: k8s
