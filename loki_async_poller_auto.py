@@ -175,9 +175,9 @@ async def process_json_and_collect_events(json_response: dict, installation_meta
         return events
 
     container_identifier, service_name = installation_metadata
-    hostname = log_sources[container_identifier][service_name].get("hostname", "unsetted_hostname")
-    syslog_programname = log_sources[container_identifier][service_name].get("syslog_service_name")
-    port = log_sources[container_identifier][service_name].get("port", 514)
+    hostname = LOG_SOURCES[container_identifier].get("hostname", "unsetted_hostname")
+    syslog_programname = LOG_SOURCES[container_identifier].get("log_source_type")
+    port = LOG_SOURCES[container_identifier][service_name].get("port", 514)
 
     streams_list = json_response["data"]["result"]
 
